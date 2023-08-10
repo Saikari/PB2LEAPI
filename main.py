@@ -2,6 +2,7 @@ import logging
 from asyncio import run
 
 from DataInterfaces.MapIO import MapIO
+from Utils.mapTools import MapTools
 
 # Set up logging configuration
 logging.basicConfig(
@@ -10,11 +11,15 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+# Initialize map tools
+mapTools = MapTools()
+
 
 # Example usage
 async def main():
     try:
-        map_instance = await MapIO.load_map_from_file_async("XML/bossfight_map1.xml")
+        map_data = mapTools.getMapByIdOnline('sgt dwayne-sentry', xml=True)
+        map_instance = await MapIO.load_map_from_object_async(map_data)
         logging.info("Map loaded successfully!")
         logging.debug(map_instance)  # Use logging.debug for more detailed information
         logging.info("Map instance has been created successfully!")

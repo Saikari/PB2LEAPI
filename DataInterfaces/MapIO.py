@@ -2,7 +2,7 @@ from re import sub
 from typing import Optional
 from aiofiles import open
 from DataInterfaces.Map import Map
-
+from os import path
 
 class MapIO:
     @staticmethod
@@ -22,11 +22,11 @@ class MapIO:
             raise Exception(f"An error occurred while reading the file: {e}")
 
     @staticmethod
-    async def load_map_from_file_async(file_location: str) -> Optional[Map]:
+    async def load_map_from_object_async(file_location: str) -> Optional[Map]:
         try:
             map_instance = Map()
             map_instance.from_xml('<?xml version="1.0" encoding="UTF-8" ?><root>'
-                                  f'{await MapIO.read_file_async(file_location)}</root>')
+                                  f'{await MapIO.read_file_async(file_location) if path.isfile(file_location) else file_location}</root>')
             return map_instance
         except FileNotFoundError as e:
             raise Exception(f"Could not find the file '{file_location}': {e}")
