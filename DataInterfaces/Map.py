@@ -1,45 +1,47 @@
-import re
 from asyncio import gather
-from itertools import chain
+from traceback import format_exc
+from typing import Union
 from xml.etree.ElementTree import fromstring
 
-from DataInterfaces.Entity import Action
+from DataInterfaces.Entity import TriggersActionEntity
 from DataInterfaces.MapObjectSpecials import EngineMarks
-from DataInterfaces.MapObjects import Door, Region, Timer, Vehicle, Box, Water, Decoration, Song, Lamp, Barrel, Gun, \
-    Pusher, Background, Character, EngineMark, Trigger
-from traceback import format_exc
+from DataInterfaces.MapObjects import Door, Region, Timer, Vehicle, Box, Water, Decor, Song, Lamp, Barrel, Gun, \
+    Pushf, Bg, Enemy, Player, Inf, Trigger, Image
+
 
 class Map:
     def __init__(self):
         self.objects = {
-            Door: [],
-            Region: [],
-            Timer: [],
-            Vehicle: [],
-            Box: [],
+            Player: [],
+            Pushf: [],
+            Image: [],
+            Bg: [],
             Water: [],
-            Decoration: [],
+            Box: [],
+            Door: [],
+            Decor: [],
+            Gun: [],
+            Region: [],
+            Trigger: [],
+            Timer: [],
+            Inf: [],
+            Vehicle: [],
             Song: [],
             Lamp: [],
             Barrel: [],
-            Gun: [],
-            Pusher: [],
-            Background: [],
-            Character: [],
-            EngineMark: [],
-            Trigger: []
+            Enemy: [],
         }
 
     def new_object(self, obj_type, **kwargs):
         result = obj_type(**kwargs)
         self.objects[obj_type].append(result)
 
-    def new_movable(self, name, x, y, w, h, tarx, tary=0, speed=10, visible=True, moving=False, attachTo=None):
+    def new_movable(self, name, x, y, w, h, tarx, tary=0, speed=10, visible=True, moving=False, attach=None):
         self.new_object(Door, name=name, x=x, y=y, w=w, h=h, tarx=tarx, tary=tary, speed=speed, visible=visible,
-                        moving=moving, attachTo=attachTo)
+                        moving=moving, attach=attach)
 
-    def new_region(self, name, x, y, w, h=0, actTrigger=None, actOn=None, attachTo=None):
-        self.new_object(Region, name=name, x=x, y=y, w=w, h=h, actTrigger=actTrigger, actOn=actOn, attachTo=attachTo)
+    def new_region(self, name, x, y, w, h=0, actTrigger=None, actOn=None, attach=None):
+        self.new_object(Region, name=name, x=x, y=y, w=w, h=h, actTrigger=actTrigger, actOn=actOn, attach=attach)
 
     def new_timer(self, name, x, y=0, enabled=True, callback=None, maxCalls=1, delay=30):
         self.new_object(Timer, name=name, x=x, y=y, enabled=enabled, callback=callback, maxCalls=maxCalls, delay=delay)
@@ -54,9 +56,9 @@ class Map:
         self.new_object(Water, x=x, y=y, w=w, h=h, damage=damage, friction=friction)
 
     def new_decoration(self, name, x, y, texX, texY, rotation, layer=0, scaleX=1, scaleY=1, model="stone",
-                       attachTo=None):
-        self.new_object(Decoration, name=name, x=x, y=y, texX=texX, texY=texY, rotation=rotation, layer=layer,
-                        scaleX=scaleX, scaleY=scaleY, model=model, attachTo=attachTo)
+                       attach=None):
+        self.new_object(Decor, name=name, x=x, y=y, texX=texX, texY=texY, rotation=rotation, layer=layer,
+                        scaleX=scaleX, scaleY=scaleY, model=model, attach=attach)
 
     def new_song(self, name, x, y=0, url="", volume=1, loop=True, onEnd=None):
         self.new_object(Song, name=name, x=x, y=y, url=url, volume=volume, loop=loop, onEnd=onEnd)
@@ -70,21 +72,26 @@ class Map:
     def new_weapon(self, name, x, y, level=0, team=-1, model="gun_rifle"):
         self.new_object(Gun, name=name, x=x, y=y, level=level, team=team, model=model)
 
-    def new_pusher(self, name, x, y, tox, toy, stabilityDamage, damage=0, attachTo=None):
-        self.new_object(Pusher, name=name, x=x, y=y, tox=tox, toy=toy, stabilityDamage=stabilityDamage, damage=damage,
-                        attachTo=attachTo)
+    def new_pusher(self, name, x, y, tox, toy, stabilityDamage, damage=0, attach=None):
+        self.new_object(Pushf, name=name, x=x, y=y, tox=tox, toy=toy, stabilityDamage=stabilityDamage, damage=damage,
+                        attach=attach)
 
-    def new_background(self, x, y, texX, texY, layer=0, hexMultiplier="", showShadow=True, attachTo=None):
-        self.new_object(Background, x=x, y=y, texX=texX, texY=texY, layer=layer, hexMultiplier=hexMultiplier,
-                        showShadow=showShadow, attachTo=attachTo)
+    def new_background(self, x, y, texX, texY, layer=0, hexMultiplier="", showShadow=True, attach=None):
+        self.new_object(Bg, x=x, y=y, texX=texX, texY=texY, layer=layer, hexMultiplier=hexMultiplier,
+                        showShadow=showShadow, attach=attach)
 
-    def new_character(self, name, x, y, tox, toy=0, hea=130, hmax=130, team=0, side=1, skin=-1, incar=None, botAction=4,
-                      onDeath=None, isPlayer=True):
-        self.new_object(Character, name=name, x=x, y=y, tox=tox, toy=toy, hea=hea, hmax=hmax, team=team, side=side,
-                        skin=skin, botAction=botAction, onDeath=onDeath, isPlayer=isPlayer, incar=incar)
+    def new_enemy(self, name, x, y, tox, toy=0, hea=130, hmax=130, team=0, side=1, char=-1, incar=None, botAction=4,
+                  onDeath=None):
+        self.new_object(Enemy, name=name, x=x, y=y, tox=tox, toy=toy, hea=hea, hmax=hmax, team=team, side=side,
+                        char=char, botAction=botAction, onDeath=onDeath, incar=incar)
+
+    def new_player(self, name, x, y, tox, toy=0, hea=130, hmax=130, team=0, side=1, char=-1, incar=None, botAction=4,
+                   onDeath=None):
+        self.new_object(Player, name=name, x=x, y=y, tox=tox, toy=toy, hea=hea, hmax=hmax, team=team, side=side,
+                        char=char, botAction=botAction, onDeath=onDeath, incar=incar)
 
     def new_engine_mark(self, x, y=0, modifier=EngineMarks.MARINE_WEAPONS, parameter="0"):
-        self.new_object(EngineMark, x=x, y=y, modifier=modifier, parameter=parameter)
+        self.new_object(Inf, x=x, y=y, modifier=modifier, parameter=parameter)
 
     def parse_trigger(self, trigger_elem):
         trigger = Trigger()
@@ -99,7 +106,7 @@ class Map:
         trigger.maxcalls = int(trigger_elem.get("maxcalls")) if trigger_elem.get("maxcalls") is not None else 0
 
         for action_elem in trigger_elem.iter("action"):
-            action = Action()
+            action = TriggersActionEntity()
             action.opID = int(action_elem.get("opID")) if action_elem.get("opID") is not None else 0
             action.args = action_elem.get("args").split(",") if action_elem.get("args") else ["0", "0"]
             trigger.actions.append(action)
@@ -123,38 +130,29 @@ class Map:
 
         self.objects[Timer].append(timer)
 
-    def parse_character(self, character_elem):
-        character = Character()
+    def parse_enemy(self, enemy_elem):
+        enemy_name = enemy_elem.get("uid")
+        if enemy_name is None:
+            raise ValueError("Enemy name cannot be empty or missing!")
+        enemy = parse_map_object(Enemy,
+                                 **fill_character_kwargs(enemy_name, enemy_elem))
+        self.objects[Enemy].append(enemy)
 
-        character_name = character_elem.get("uid")
-        if character_name is None:
-            raise ValueError("Character name cannot be empty or missing!")
-        character.uid = str(character_name)
-
-        character.x = int(character_elem.get("x")) if character_elem.get("x") is not None else 0
-        character.y = int(character_elem.get("y")) if character_elem.get("y") is not None else 0
-        character.isPlayer = bool(character_elem.find("player") is not None)
-
-        character.tox = float(character_elem.get("tox")) if character_elem.get("tox") is not None else 0.0
-        character.toy = float(character_elem.get("toy")) if character_elem.get("toy") is not None else 0.0
-        character.hea = float(character_elem.get("hea")) if character_elem.get("hea") is not None else 0.0
-        character.hmax = float(character_elem.get("hmax")) if character_elem.get("hmax") is not None else 0.0
-
-        character.team = int(character_elem.get("team")) if character_elem.get("team") is not None else 0
-        character.side = int(character_elem.get("side")) if character_elem.get("side") is not None else 0
-        character.char = int(character_elem.get("skin")) if character_elem.get("skin") is not None else 0
-        character.botaction = int(character_elem.get("botaction")) if character_elem.get("botaction") is not None else 0
-        character.ondeath = str(character_elem.get("ondeath")) or ""
-
-        self.objects[Character].append(character)
+    def parse_player(self, player_elem):
+        player_name = player_elem.get("uid")
+        if player_name is None:
+            raise ValueError("Player name cannot be empty or missing!")
+        player = parse_map_object(Player,
+                                  **fill_character_kwargs(player_name, player_elem))
+        self.objects[Player].append(player)
 
     def parse_door(self, door_elem):
         door = Door()
 
-        movable_name = str(door_elem.get("uid"))
-        if movable_name is None or movable_name.strip() == "":
-            raise ValueError("Movable name cannot be empty or missing!")
-        door.uid = str(movable_name)
+        door_name = str(door_elem.get("uid"))
+        if door_name is None:
+            raise ValueError("Door name cannot be empty or missing!")
+        door.uid = str(door_name)
 
         door.w = int(door_elem.get("w")) if door_elem.get("w") is not None else 0
         door.h = int(door_elem.get("h")) if door_elem.get("h") is not None else 0
@@ -162,15 +160,15 @@ class Map:
         door.x = int(door_elem.get("x")) if door_elem.get("x") is not None else 0
         door.maxspeed = float(door_elem.get("maxspeed")) if door_elem.get("maxspeed") is not None else 0.0
         door.vis = bool(door_elem.get("vis") == "true")
-        door.attach = str(door_elem.get("attach")) or ""
+        door.attach = str(door_elem.get("attach")) if door_elem.get("attach") is not None else "-1"
 
         self.objects[Door].append(door)
 
     def parse_decoration(self, decoration_elem):
-        decoration = Decoration()
+        decoration = Decor()
 
         decoration_name = decoration_elem.get("uid")
-        if decoration_name is None or decoration_name.strip() == "":
+        if decoration_name is None:
             raise ValueError("Decoration name cannot be empty or missing!")
         decoration.uid = str(decoration_name)
 
@@ -186,15 +184,15 @@ class Map:
         decoration.u = float(decoration_elem.get("u")) if decoration_elem.get("u") is not None else 0.0
         decoration.v = float(decoration_elem.get("v")) if decoration_elem.get("v") is not None else 0.0
 
-        decoration.attach = str(decoration_elem.get("attach")) or ""
+        decoration.attach = str(decoration_elem.get("attach")) if decoration_elem.get("attach") is not None else "-1"
 
-        self.objects[Decoration].append(decoration)
+        self.objects[Decor].append(decoration)
 
     def parse_region(self, region_elem):
         region = Region()
 
         region_name = region_elem.get("uid")
-        if region_name is None or region_name.strip() == "":
+        if region_name is None:
             raise ValueError("Region name cannot be empty or missing!")
         region.uid = str(region_name)
 
@@ -206,7 +204,7 @@ class Map:
         region.use_on = int(region_elem.get("use_on")) if region_elem.get("use_on") is not None else 0
         region.use_target = region_elem.get("use_target") if region_elem.get("use_target") is not None else ""
 
-        region.attach = region_elem.get("attach") or ""
+        region.attach = str(region_elem.get("attach")) if region_elem.get("attach") is not None else "-1"
 
         self.objects[Region].append(region)
 
@@ -214,7 +212,7 @@ class Map:
         song = Song()
 
         song_name = song_elem.get("uid")
-        if song_name is None or song_name.strip() == "":
+        if song_name is None:
             raise ValueError("Song name cannot be empty or missing!")
         song.uid = str(song_name)
 
@@ -234,7 +232,7 @@ class Map:
         lamp = Lamp()
 
         lamp_name = lamp_elem.get("uid")
-        if lamp_name is None or lamp_name.strip() == "":
+        if lamp_name is None:
             raise ValueError("Lamp name cannot be empty or missing!")
         lamp.uid = str(lamp_name)
 
@@ -251,7 +249,7 @@ class Map:
         barrel = Barrel()
 
         barrel_name = barrel_elem.get("uid")
-        if barrel_name is None or barrel_name.strip() == "":
+        if barrel_name is None:
             raise ValueError("Barrel name cannot be empty or missing!")
         barrel.uid = str(barrel_name)
 
@@ -268,7 +266,7 @@ class Map:
         gun = Gun()
 
         weapon_name = gun_elem.get("uid")
-        if weapon_name is None or weapon_name.strip() == "":
+        if weapon_name is None:
             raise ValueError("Gun name cannot be empty or missing!")
         gun.uid = str(weapon_name)
 
@@ -282,10 +280,10 @@ class Map:
         self.objects[Gun].append(gun)
 
     def parse_pusher(self, pusher_elem):
-        pusher = Pusher()
+        pusher = Pushf()
 
-        pusher_name = pusher_elem.get("name")
-        if pusher_name is None or pusher_name.strip() == "":
+        pusher_name = pusher_elem.get("uid")
+        if pusher_name is None:
             raise ValueError("Pusher name cannot be empty or missing!")
         pusher.uid = str(pusher_name)
 
@@ -295,17 +293,17 @@ class Map:
         pusher.w = int(pusher_elem.get("w")) if pusher_elem.get("w") is not None else 0
         pusher.tox = float(pusher_elem.get("tox")) if pusher_elem.get("tox") is not None else 0.0
         pusher.toy = float(pusher_elem.get("toy")) if pusher_elem.get("toy") is not None else 0.0
-        pusher.attachTo = pusher_elem.get("attach") or ""
+        pusher.attach = str(pusher_elem.get("attach")) if pusher_elem.get("attach") is not None else "-1"
         pusher.damage = float(pusher_elem.get("damage")) if pusher_elem.get("damage") is not None else 0.0
-        pusher.stabilityDamage = float(pusher_elem.get("stab")) if pusher_elem.get("stab") is not None else 0.0
+        pusher.stab = float(pusher_elem.get("stab")) if pusher_elem.get("stab") is not None else 0.0
 
-        self.objects[Pusher].append(pusher)
+        self.objects[Pushf].append(pusher)
 
     def parse_vehicle(self, vehicle_elem):
         vehicle = Vehicle()
 
-        vehicle_name = vehicle_elem.get("name")
-        if vehicle_name is None or vehicle_name.strip() == "":
+        vehicle_name = vehicle_elem.get("uid")
+        if vehicle_name is None:
             raise ValueError("Vehicle name cannot be empty or missing!")
         vehicle.uid = str(vehicle_name)
 
@@ -322,34 +320,16 @@ class Map:
         self.objects[Vehicle].append(vehicle)
 
     def parse_water(self, water_elem):
-        water = Water()
-
-        water_name = water_elem.get("name")
-        if water_name is None or water_name.strip() == "":
+        water_name = water_elem.get("uid")
+        if water_name is None:
             raise ValueError("Water name cannot be empty or missing!")
-        water.uid = str(water_name)
-
-        water.x = int(water_elem.get("x"))
-        water.y = int(water_elem.get("y"))
-        water.w = int(water_elem.get("w"))
-        water.h = int(water_elem.get("h"))
-
-        water.damage = float(water_elem.get("damage"))
-
-        water.friction = water_elem.get("friction") == "True"
+        water = parse_map_object(Water,
+                                 **fill_water_object_kwargs(water_name, water_elem))
 
         self.objects[Water].append(water)
 
     def parse_box(self, box_elem):
-        box = Box()
-
-        box.h = int(box_elem.get("h"))
-        box.w = int(box_elem.get("w"))
-        box.x = int(box_elem.get("x"))
-        box.y = int(box_elem.get("y"))
-        box.m = int(box_elem.get("m"))
-
-        self.objects[Box].append(box)
+        self.objects[Box].append(parse_map_object(Box, **fill_box_object_kwargs(box_elem)))
 
     def parse_object(self, elem, obj_type):
         try:
@@ -357,87 +337,44 @@ class Map:
             self.new_object(obj_type, **kwargs)
         except KeyError as e:
             print(f'Parsing error: {format_exc()}')
-            key = str(e)  # Get the key that caused the KeyError
+            # key = str(e)  # Get the key that caused the KeyError
             key_attempted = e.args[0]  # Get the specific key that was attempted
             value = elem.attrib.get(key_attempted, "N/A")  # Get the corresponding value or "N/A"
             print(f"Error creating object of type {obj_type}: KeyError for key '{key_attempted}' with value '{value}'")
             print(f"Element attributes: {elem.attrib}")
 
     def from_xml(self, xml_string: str):
-        print(xml_string)
         root = fromstring(xml_string)
-        for trigger_elem in root.iter("trigger"):
-            self.parse_object(trigger_elem, Trigger)
-
-        for timer_elem in root.iter("timer"):
-            self.parse_object(timer_elem, Timer)
-
-        for character_elem in chain(root.iter("actor"), root.iter("player")):
-            self.parse_object(character_elem, Character)
-
-        for movable_elem in root.iter("door"):
-            self.parse_object(movable_elem, Door)
-
-        for decoration_elem in root.iter("decor"):
-            self.parse_object(decoration_elem, Decoration)
-
-        for region_elem in root.iter("region"):
-            self.parse_object(region_elem, Region)
-
-        for song_elem in root.iter("song"):
-            self.parse_object(song_elem, Song)
-
-        for lamp_elem in root.iter("lamp"):
-            self.parse_object(lamp_elem, Lamp)
-
-        for barrel_elem in root.iter("barrel"):
-            self.parse_object(barrel_elem, Barrel)
-
-        for weapon_elem in root.iter("gun"):
-            self.parse_object(weapon_elem, Gun)
-
-        for pusher_elem in root.iter("pusher"):
-            self.parse_object(pusher_elem, Pusher)
-
-        for vehicle_elem in root.iter("vehicle"):
-            self.parse_object(vehicle_elem, Vehicle)
-
-        for water_elem in root.iter("water"):
-            self.parse_object(water_elem, Water)
-
-        for box_elem in root.iter("box"):
-            self.parse_object(box_elem, Box)
-
-    @staticmethod
-    def find_object_by_name(obj_list, obj_type_str, name):
-        for obj in obj_list:
-            if obj.uid == name:
-                return obj
-        raise Exception(f"{obj_type_str} with name '{name}' not found.")
+        for object_type in self.objects.keys():
+            for item in root.iter(object_type.__name__.lower()):
+                self.parse_object(item, object_type)
 
     def find_trigger_by_name(self, name: str) -> Trigger:
-        return self.find_object_by_name(self.objects[Trigger], "Trigger", name)
+        return find_object_by_name(self.objects[Trigger], "Trigger", name)
 
     def find_movable_by_name(self, name: str) -> Door:
-        return self.find_object_by_name(self.objects[Door], "Door", name)
+        return find_object_by_name(self.objects[Door], "Door", name)
 
     def find_region_by_name(self, name: str) -> Region:
-        return self.find_object_by_name(self.objects[Region], "Region", name)
+        return find_object_by_name(self.objects[Region], "Region", name)
 
-    def find_pusher_by_name(self, name: str) -> Pusher:
-        return self.find_object_by_name(self.objects[Pusher], "Pusher", name)
+    def find_pusher_by_name(self, name: str) -> Pushf:
+        return find_object_by_name(self.objects[Pushf], "Pusher", name)
 
-    def find_character_by_name(self, name: str) -> Character:
-        return self.find_object_by_name(self.objects[Character], "Character", name)
+    def find_enemy_by_name(self, name: str) -> Enemy:
+        return find_object_by_name(self.objects[Enemy], "Enemy", name)
+
+    def find_player_by_name(self, name: str) -> Player:
+        return find_object_by_name(self.objects[Player], "Player", name)
 
     def find_vehicle_by_name(self, name: str) -> Vehicle:
-        return self.find_object_by_name(self.objects[Vehicle], "Vehicle", name)
+        return find_object_by_name(self.objects[Vehicle], "Vehicle", name)
 
-    def find_decoration_by_name(self, name: str) -> Decoration:
-        return self.find_object_by_name(self.objects[Decoration], "Decoration", name)
+    def find_decoration_by_name(self, name: str) -> Decor:
+        return find_object_by_name(self.objects[Decor], "Decoration", name)
 
     def find_gun_by_name(self, name: str) -> Gun:
-        return self.find_object_by_name(self.objects[Gun], "Gun", name)
+        return find_object_by_name(self.objects[Gun], "Gun", name)
 
     async def to_xml(self) -> str:
         # Convert the Map object to an XML string representation
@@ -448,18 +385,113 @@ class Map:
                 tasks.append(generate_item_xml(item))  # , object_type.__name__.lower()))
 
         results = await gather(*tasks)
-        xml_content = ' '.join(results)
+        xml_content = ''.join(results)
 
-        xml = re.sub(r'(\w+)\s*=\s*([^\s>]+)',
-                     lambda match: f'{match.group(1)}="{match.group(2)}"' if '"' not in match.group(2) else match.group(
-                         0), xml_content)
+        return xml_content
 
-        return re.sub(r'\s{2,}', ' ', xml)
+
+def find_object_by_name(obj_list, obj_type_str, name):
+    for obj in obj_list:
+        if obj.uid == name:
+            return obj
+    raise Exception(f"{obj_type_str} with name '{name}' not found.")
 
 
 # Example of the generate_item_xml function (you need to define this function)
-async def generate_item_xml(item): ###, field_name):
+async def generate_item_xml(item):  # , field_name):
     return f'{item.to_xml}'
     # Logic to generate XML for the given item
     # Return the XML string representation of the item
-    #return f'<{field_name}>{item.to_xml}</{field_name}>'
+    # return f'<{field_name}>{item.to_xml}</{field_name}>'
+
+
+def parse_map_object(map_object: Union[type(Player), type(Enemy), type(Water), type(Box)], **kwargs):
+    instance = map_object()
+    for key, value in kwargs.items():
+        if hasattr(instance, key):
+            setattr(instance, key, value)
+    return instance
+
+
+def fill_nameless_map_object_kwargs(ET_nameless_map_object) -> dict:
+    return {
+        "x": (int(ET_nameless_map_object.get("x")) if ET_nameless_map_object.get("x") is not None else 0),
+        "y": (int(ET_nameless_map_object.get("y")) if ET_nameless_map_object.get("y") is not None else 0)
+    }
+
+
+def fill_named_map_object_kwargs(object_uid, ET_named_map_object) -> dict:
+    return {
+        **fill_nameless_map_object_kwargs(ET_named_map_object),
+        "uid": object_uid
+    }
+
+
+# Box Only
+def fill_box_object_kwargs(ET_box_object) -> dict:
+    return {
+        **fill_nameless_map_object_kwargs(ET_box_object),
+        "w": (int(ET_box_object.get("w")) if
+              ET_box_object.get("w") is not None else 0),
+        "h": (int(ET_box_object.get("h")) if
+              ET_box_object.get("h") is not None else 0),
+        "m": (int(ET_box_object.get("m")) if
+              ET_box_object.get("m") is not None else 0)
+    }
+
+
+# Water, Pusher, Door, Region Only
+def fill_named_scaleable_object_kwargs(object_uid,
+                                       ET_named_scaleable_map_object) -> dict:
+    return {
+        **fill_named_map_object_kwargs(object_uid, ET_named_scaleable_map_object),
+        "w": (int(ET_named_scaleable_map_object.get("w")) if
+              ET_named_scaleable_map_object.get("w") is not None else 0),
+        "h": (int(ET_named_scaleable_map_object.get("h")) if
+              ET_named_scaleable_map_object.get("h") is not None else 0)
+    }
+
+
+def fill_water_object_kwargs(water_uid,
+                             ET_water_object) -> dict:
+    return {
+        **fill_named_scaleable_object_kwargs(water_uid, ET_water_object),
+        "damage": (float(ET_water_object.get("damage"))
+                   if ET_water_object.get("damage") is not None else 0),
+        "friction": (ET_water_object.get("friction") == "true"
+                     if ET_water_object.get("friction") is not None else "false")
+    }
+
+
+# Pusher, Door, Region Only
+def fill_named_scaleable_attachable_object_kwargs(object_uid,
+                                                  ET_named_scaleable_attachable_map_object) -> dict:
+    return {
+        **fill_named_scaleable_object_kwargs(object_uid, ET_named_scaleable_attachable_map_object),
+        "attach": (str(ET_named_scaleable_attachable_map_object.get("attach"))
+                   if ET_named_scaleable_attachable_map_object.get("attach") is not None else "-1")
+    }
+
+
+def fill_character_kwargs(character_uid, ET_player_or_enemy_object) -> dict:
+    return {
+        **fill_named_map_object_kwargs(character_uid, ET_player_or_enemy_object),
+        "tox": (
+            float(ET_player_or_enemy_object.get("tox")) if ET_player_or_enemy_object.get("tox") is not None else 0.0),
+        "toy": (
+            float(ET_player_or_enemy_object.get("toy")) if ET_player_or_enemy_object.get("toy") is not None else 0.0),
+        "hea": (
+            float(ET_player_or_enemy_object.get("hea")) if ET_player_or_enemy_object.get("hea") is not None else 0.0),
+        "hmax": (float(ET_player_or_enemy_object.get("hmax")) if ET_player_or_enemy_object.get(
+            "hmax") is not None else 0.0),
+        "team": (
+            int(ET_player_or_enemy_object.get("team")) if ET_player_or_enemy_object.get("team") is not None else 0),
+        "side": (
+            int(ET_player_or_enemy_object.get("side")) if ET_player_or_enemy_object.get("side") is not None else 0),
+        "char": (
+            int(ET_player_or_enemy_object.get("char")) if ET_player_or_enemy_object.get("char") is not None else 0),
+        "botaction": (int(ET_player_or_enemy_object.get("botaction")) if ET_player_or_enemy_object.get(
+            "botaction") is not None else 0),
+        "ondeath": (str(ET_player_or_enemy_object.get("ondeath")) or "-1"),
+        "incar": (str(ET_player_or_enemy_object.get("incar")) or "-1")
+    }
