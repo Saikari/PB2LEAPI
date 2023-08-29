@@ -29,7 +29,7 @@ from typing import Optional
 from aiofiles import open
 
 from DataInterfaces.Map import Map
-
+from os import path
 
 class MapIO:
     """
@@ -104,10 +104,11 @@ class MapIO:
             UnicodeDecodeError: If there is an error decoding the file as UTF-8.
             Exception: If any other error occurs while loading the map.
         """
+
         try:
             map_instance = Map()
             map_instance.from_xml('<?xml version="1.0" encoding="UTF-8" ?><root>'
-                                  f'{await MapIO.read_file_async(file_location)}</root>')
+                                  f'{await MapIO.read_file_async(file_location) if path.isfile(file_location) else file_location}</root>')
             return map_instance
         except FileNotFoundError as e:
             raise FileNotFoundError(f"Could not find the file '{file_location}': {e}")
